@@ -119,22 +119,56 @@ def run_react_agent(user_query: str, provider, mcp_server: MCPAcademicServer) ->
                 
                 # Tổng hợp Final Answer từ kết quả Observation thực tế
                 if obs_data.get("status") == "SUCCESS":
+                    # Kết quả từ tool library_query
                     if "data" in obs_data:
-                        d = obs_data["data"]
+                        document = obs_data["data"]
+                        borrower_name = document.get("borrower_name") or "Chưa có người mượn"
+                        due_date = document.get("due_date") or "Không có"
+                        reserved_by = document.get("reserved_by") or "Không có"
+
                         final_answer = (
-                            f"Kết quả tra cứu cho sinh viên {obs_data.get('student_id', '')} ({d.get('full_name', '')}): "
-                            f"Lớp {d.get('class', '')}, GPA: {d.get('gpa', '')}, Email: {d.get('email', '')}, "
-                            f"Trạng thái: {d.get('status', '')}, Cố vấn: {d.get('advisor', '')}."
+                            f"Kết quả tra cứu tài liệu {obs_data.get('document_id', '')}: "
+                            f"'{document.get('title', '')}', "
+                            f"tác giả {document.get('author', '')}. "
+                            f"Thể loại: {document.get('category', '')}. "
+                            f"Vị trí: {document.get('location', '')}. "
+                            f"Trạng thái: {document.get('status', '')}. "
+                            f"Người mượn: {borrower_name}. "
+                            f"Hạn trả: {due_date}. "
+                            f"Người đặt trước: {reserved_by}."
                         )
+
+                    # Kết quả từ tool renew_library_item
                     elif "message" in obs_data:
                         final_answer = obs_data["message"]
                     else:
-                        final_answer = f"Đã hoàn tất xử lý qua MCP Server: {json.dumps(obs_data, ensure_ascii=False)}"
+                        final_answer = (
+                            "Đã hoàn tất xử lý qua MCP Server: "
+                            f"{json.dumps(obs_data, ensure_ascii=False)}"
+                        )
+
                 elif obs_data.get("status") == "NOT_FOUND":
-                    final_answer = obs_data.get("message", "Không tìm thấy thông tin sinh viên yêu cầu.")
+                    final_answer = obs_data.get(
+                        "message",
+                        "Không tìm thấy sách hoặc tài liệu được yêu cầu."
+                    )
+
+                elif obs_data.get("status") in {
+                    "INVALID_STATUS",
+                    "BORROWER_MISMATCH",
+                    "RENEWAL_REJECTED",
+                    "INVALID_DATETIME"
+                }:
+                    final_answer = obs_data.get(
+                        "message",
+                        "Không thể thực hiện yêu cầu gia hạn tài liệu."
+                    )
+
                 else:
-                    final_answer = f"Phản hồi từ công cụ: {json.dumps(obs_data, ensure_ascii=False)}"
-            
+                    final_answer = (
+                        "Phản hồi từ công cụ: "
+                        f"{json.dumps(obs_data, ensure_ascii=False)}"
+                    )
             trace_logs.append({
                 "step": step,
                 "query": user_query,
@@ -175,59 +209,80 @@ if __name__ == "__main__":
     
     tests = load_test_cases()
     print(f"✅ Đã tải thành công {len(tests)} Test Cases thử nghiệm.\n")
-    
+
     if "--interactive" in sys.argv:
-        print("🎮 [INTERACTIVE MODE] Trò chuyện trực tiếp với ReAct Agent:")
-        print("💡 Gợi ý câu hỏi thử nghiệm:")
-        print("   - Câu hỏi chung: 'Quy chế học vụ VinUni yêu cầu bao nhiêu tín chỉ?'")
-        print("   - Tra cứu học vụ: 'Hãy tra cứu thông tin học vụ của sinh viên SV2026001'")
-        print("   - Đặt lịch hẹn: 'Đặt lịch hẹn tư vấn cho SV2026001 vào 14:00 ngày 15/09/2026'")
-        print("   - Gõ 'exit' hoặc 'quit' để kết thúc phiên trò chuyện.\n")
+        print("🎮 [INTERACTIVE MODE] Trò chuyện với ReAct Agent thư viện:")
+        print("💡 Gợi ý:")
+        print("   - Tra cứu: 'Hãy tra cứu vị trí và tình trạng tài liệu TL001.'")
+        print(
+            "   - Gia hạn: 'Gia hạn TL002 cho Nguyễn Minh Anh đến "
+            "14:00 29/09/2026.'"
+        )
+        print(
+            "   - Đa bước: 'Kiểm tra TL002 rồi gia hạn đến "
+            "14:00 29/09/2026 nếu hợp lệ.'"
+        )
+        print("   - Gõ 'exit' hoặc 'quit' để kết thúc.\n")
+
         while True:
             try:
-                user_input = input("👤 Sinh viên hỏi: ").strip()
-                if not user_input or user_input.lower() in ["exit", "quit"]:
+                user_input = input("👤 Người dùng hỏi: ").strip()
+                if not user_input or user_input.casefold() in ["exit", "quit"]:
                     print("👋 Tạm biệt! Kết thúc phiên trò chuyện.")
                     break
+
                 logs = run_react_agent(user_input, provider, mcp_server)
                 save_waterfall_trace(logs)
             except (KeyboardInterrupt, EOFError):
                 print("\n👋 Đã thoát phiên tương tác.")
                 break
+
     elif "--all" in sys.argv:
-        print("🚀 [TEST SUITE MODE] Kiểm tra 5 Test Cases:")
+        print("🚀 [TEST SUITE MODE] Kiểm tra toàn bộ Test Cases:")
         completed_count = 0
         todo_count = 0
         all_traces = []
-        
-        for tc in tests:
-            print(f"\n==================================================")
-            print(f"🧪 [{tc['id']}] Loại test: {tc['type']} (Độ phức tạp: {tc['complexity']})")
-            print(f"📌 Kỳ vọng: {tc['expected_behavior']}")
-            
-            if tc["question"].strip().startswith("TODO"):
-                print(f"⏸️ [CHƯA KÍCH HOẠT - ĐANG LÀ TODO]:")
-                print(f"   {tc['question']}")
-                print(f"   👉 Hãy mở file 'config/test_cases.json' để viết câu hỏi thực tế cho Test Case này!")
+
+        for test_case in tests:
+            print("\n==================================================")
+            print(
+                f"🧪 [{test_case['id']}] Loại test: {test_case['type']} "
+                f"(Độ phức tạp: {test_case['complexity']})"
+            )
+            print(f"📌 Kỳ vọng: {test_case['expected_behavior']}")
+
+            if test_case["question"].strip().startswith("TODO"):
+                print("⏸️ [CHƯA KÍCH HOẠT - ĐANG LÀ TODO]")
+                print(f"   {test_case['question']}")
                 todo_count += 1
-            else:
-                logs = run_react_agent(tc["question"], provider, mcp_server)
-                all_traces.extend(logs)
-                completed_count += 1
-                
-        print(f"\n==================================================")
-        print(f"📊 [KẾT QUẢ TEST SUITE]: Đã thực thi {completed_count}/{len(tests)} Test Cases | {todo_count} Test Cases đang chờ điền câu hỏi (TODO)")
+                continue
+
+            logs = run_react_agent(
+                test_case["question"],
+                provider,
+                mcp_server
+            )
+            all_traces.extend(logs)
+            completed_count += 1
+
+        print("\n==================================================")
+        print(
+            f"📊 [KẾT QUẢ TEST SUITE]: Đã thực thi "
+            f"{completed_count}/{len(tests)} Test Cases | "
+            f"{todo_count} Test Cases đang TODO"
+        )
+
         if all_traces:
             save_waterfall_trace(all_traces)
-        print(f"💡 Để trò chuyện trực tiếp từng câu: Chạy 'python src/app.py --interactive'")
+
+        print("💡 Chạy tương tác bằng: python src/app.py --interactive")
+
     else:
-        # Chế độ mặc định khi chỉ gõ 'python src/app.py'
-        print("ℹ️ HƯỚNG DẪN SỬ DỤNG CHƯƠNG TRÌNH:")
-        print("  1. Chat trực tiếp liên tục:   python src/app.py --interactive")
-        print("  2. Chạy toàn bộ Test Cases:    python src/app.py --all\n")
-        
+        print("ℹ️ HƯỚNG DẪN SỬ DỤNG:")
+        print("  1. Chat trực tiếp:          python src/app.py --interactive")
+        print("  2. Chạy toàn bộ test:       python src/app.py --all\n")
+
         sample_query = tests[1]["question"]
-        print(f"--- 🏁 DEMO CHẠY THỬ 1 TEST CASE MẪU (TC02: Tra cứu học vụ) ---")
+        print("--- 🏁 DEMO TEST TRA CỨU TÀI LIỆU ---")
         logs = run_react_agent(sample_query, provider, mcp_server)
         save_waterfall_trace(logs)
-        print("\n💡 Hãy thử ngay lệnh: python src/app.py --interactive để chat trực tiếp!")

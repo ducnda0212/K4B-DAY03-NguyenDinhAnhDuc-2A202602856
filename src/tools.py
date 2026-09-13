@@ -11,41 +11,40 @@ from typing import Dict, Any
 # ==============================================================================
 
 TOOLS_SCHEMA = [
-    # Tool 1: Đã được định nghĩa mẫu sẵn cho Học viên tham khảo
     {
-        "name": "academic_query",
-        "description": "Tra cứu hồ sơ và thông tin học vụ của sinh viên VinUni bằng mã sinh viên.",
+        "name": "library_query",
+        "description": "Tra cứu thông tin sách/tài liệu trong thư viện, bao gồm tên tài liệu, tác giả, vị trí lưu trữ và tình trạng mượn/trả.",
         "parameters": {
             "type": "object",
             "properties": {
-                "student_id": {
+                "document_id": {
                     "type": "string",
-                    "description": "Mã sinh viên cần tra cứu (ví dụ: 'SV2026001')"
+                    "description": "Mã sách hoặc tài liệu cần tra cứu (ví dụ: 'TL001')."
                 }
             },
-            "required": ["student_id"]
+            "required": ["document_id"]
         }
     },
-    
-    # --------------------------------------------------------------------------
-    # TODO 1.2: HỌC VIÊN HOÀN THIỆN TOOL SCHEMA CHO 'schedule_appointment'
-    # 🎯 YÊU CẦU THIẾT KẾ SCHEMA (JSON SCHEMA STANDARD):
-    # 1. Tool dùng để đặt lịch hẹn tư vấn học vụ với Cố vấn học tập VinUni.
-    # 2. Thiết kế các tham số (properties) để LLM trích xuất:
-    #    - student_id (string): Mã sinh viên cần đặt lịch (ví dụ: 'SV2026001')
-    #    - datetime_str (string): Thời gian hẹn (ví dụ: '14:00 15/09/2026')
-    #    - advisor_name (string): Tên cố vấn học tập
-    # 3. Khai báo danh sách các trường bắt buộc (required).
-    # --------------------------------------------------------------------------
     {
-        "name": "schedule_appointment",
-        "description": "Đặt lịch hẹn tư vấn học vụ với Cố vấn học tập VinUni.",
+        "name": "renew_library_item",
+        "description": "Gia hạn thời gian mượn sách hoặc tài liệu cho đúng người đang mượn.",
         "parameters": {
             "type": "object",
             "properties": {
-                # TODO 1.2: Khai báo các thuộc tính tham số cho Tool tại đây...
+                "document_id": {
+                    "type": "string",
+                    "description": "Mã sách hoặc tài liệu cần gia hạn (ví dụ: 'TL002')."
+                },
+                "datetime_str": {
+                    "type": "string",
+                    "description": "Thời hạn mới sau khi gia hạn (ví dụ: '14:00 15/09/2026')."
+                },
+                "borrower_name": {
+                    "type": "string",
+                    "description": "Họ tên người đang mượn tài liệu."
+                }
             },
-            "required": [] # TODO 1.2: Khai báo danh sách các trường bắt buộc tại đây...
+            "required": ["document_id", "datetime_str", "borrower_name"]
         }
     }
 ]
@@ -55,64 +54,138 @@ TOOLS_SCHEMA = [
 # ==============================================================================
 
 MOCK_DATABASE = {
-    "SV2026001": {
-        "full_name": "Nguyễn Văn An",
-        "class": "AI-K4",
-        "gpa": 3.85,
-        "email": "an.nv@vinuni.edu.vn",
-        "status": "Đang học",
-        "advisor": "PGS.TS Nguyễn Văn A"
+    "TL001": {
+        "title": "Lập trình Python cơ bản",
+        "author": "Nguyễn Văn An",
+        "category": "Công nghệ thông tin",
+        "location": "Tầng 2 - Kệ CNTT-01",
+        "status": "Có sẵn",
+        "borrower_name": None,
+        "due_date": None,
+        "reserved_by": None
     },
-    "SV2026002": {
-        "full_name": "Trần Thị Bình",
-        "class": "AI-K4",
-        "gpa": 3.60,
-        "email": "binh.tt@vinuni.edu.vn",
-        "status": "Đang học",
-        "advisor": "TS. Lê Thị B"
+    "TL002": {
+        "title": "Trí tuệ nhân tạo hiện đại",
+        "author": "Trần Minh Đức",
+        "category": "Trí tuệ nhân tạo",
+        "location": "Tầng 2 - Kệ AI-02",
+        "status": "Đang được mượn",
+        "borrower_name": "Nguyễn Minh Anh",
+        "due_date": "14:00 15/09/2026",
+        "reserved_by": None
+    },
+    "TL003": {
+        "title": "Kỹ nghệ phần mềm",
+        "author": "Lê Hoàng Nam",
+        "category": "Kỹ thuật phần mềm",
+        "location": "Tầng 3 - Kệ SE-01",
+        "status": "Đang được mượn",
+        "borrower_name": "Trần Thị Bình",
+        "due_date": "09:00 14/09/2026",
+        "reserved_by": "Phạm Gia Huy"
     }
 }
 
 
-def execute_academic_query(student_id: str) -> str:
-    """Thực thi tra cứu học vụ theo mã sinh viên"""
-    student = MOCK_DATABASE.get(student_id.strip().upper())
-    if student:
+def execute_library_query(document_id: str) -> str:
+    """Thực thi tra cứu sách/tài liệu theo mã tài liệu."""
+    normalized_id = document_id.strip().upper()
+    document = MOCK_DATABASE.get(normalized_id)
+
+    if document:
         return json.dumps({
             "status": "SUCCESS",
-            "student_id": student_id,
-            "data": student
+            "document_id": normalized_id,
+            "data": document
         }, ensure_ascii=False)
-    else:
+
+    return json.dumps({
+        "status": "NOT_FOUND",
+        "message": f"Không tìm thấy sách hoặc tài liệu có mã '{document_id}'."
+    }, ensure_ascii=False)
+
+
+def execute_renew_library_item(
+    document_id: str,
+    datetime_str: str,
+    borrower_name: str
+) -> str:
+    """Thực thi gia hạn tài liệu cho đúng người đang mượn."""
+    normalized_id = document_id.strip().upper()
+    normalized_borrower = borrower_name.strip()
+    new_due_date = datetime_str.strip()
+    document = MOCK_DATABASE.get(normalized_id)
+
+    if not document:
         return json.dumps({
             "status": "NOT_FOUND",
-            "message": f"Không tìm thấy dữ liệu sinh viên có mã '{student_id}'"
+            "message": f"Không tìm thấy sách hoặc tài liệu có mã '{document_id}'."
         }, ensure_ascii=False)
 
+    if document["status"] != "Đang được mượn":
+        return json.dumps({
+            "status": "INVALID_STATUS",
+            "message": f"Tài liệu '{normalized_id}' hiện không ở trạng thái đang được mượn."
+        }, ensure_ascii=False)
 
-def execute_schedule_appointment(student_id: str, datetime_str: str, advisor_name: str = "PGS.TS Nguyễn Văn A") -> str:
-    """Thực thi đặt lịch hẹn tư vấn học vụ"""
+    current_borrower = document.get("borrower_name") or ""
+    if current_borrower.casefold() != normalized_borrower.casefold():
+        return json.dumps({
+            "status": "BORROWER_MISMATCH",
+            "message": f"Tài liệu '{normalized_id}' không được mượn bởi '{borrower_name}'."
+        }, ensure_ascii=False)
+
+    if document.get("reserved_by"):
+        return json.dumps({
+            "status": "RENEWAL_REJECTED",
+            "message": (
+                f"Không thể gia hạn tài liệu '{normalized_id}' vì đã được "
+                f"{document['reserved_by']} đặt trước."
+            )
+        }, ensure_ascii=False)
+
+    if not new_due_date:
+        return json.dumps({
+            "status": "INVALID_DATETIME",
+            "message": "Thời hạn gia hạn không được để trống."
+        }, ensure_ascii=False)
+
+    previous_due_date = document["due_date"]
+    document["due_date"] = new_due_date
+
     return json.dumps({
         "status": "SUCCESS",
-        "booking_id": f"BK-{student_id}-99",
-        "student_id": student_id,
-        "datetime": datetime_str,
-        "advisor": advisor_name,
-        "message": f"Đặt lịch thành công cho sinh viên {student_id} với {advisor_name} vào lúc {datetime_str}."
+        "document_id": normalized_id,
+        "title": document["title"],
+        "borrower_name": current_borrower,
+        "previous_due_date": previous_due_date,
+        "new_due_date": new_due_date,
+        "message": (
+            f"Đã gia hạn tài liệu '{document['title']}' cho {current_borrower} "
+            f"đến {new_due_date}."
+        )
     }, ensure_ascii=False)
 
 
 # Router gọi tool thực tế
 TOOL_ROUTER = {
-    "academic_query": execute_academic_query,
-    "schedule_appointment": execute_schedule_appointment
+    "library_query": execute_library_query,
+    "renew_library_item": execute_renew_library_item
 }
 
+
 def dispatch_tool_call(tool_name: str, arguments: Dict[str, Any]) -> str:
-    """Hàm trung chuyển thực thi tool"""
+    """Hàm trung chuyển thực thi tool."""
     if tool_name in TOOL_ROUTER:
         try:
             return TOOL_ROUTER[tool_name](**arguments)
         except Exception as e:
-            return json.dumps({"status": "EXECUTION_ERROR", "error": str(e)}, ensure_ascii=False)
-    return json.dumps({"status": "UNKNOWN_TOOL", "error": f"Tool '{tool_name}' không tồn tại!"}, ensure_ascii=False)
+            return json.dumps({
+                "status": "EXECUTION_ERROR",
+                "error": str(e)
+            }, ensure_ascii=False)
+
+    return json.dumps({
+        "status": "UNKNOWN_TOOL",
+        "error": f"Tool '{tool_name}' không tồn tại!"
+    }, ensure_ascii=False)

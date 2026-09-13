@@ -27,38 +27,227 @@ class BaseLLMProvider:
 
 
 class MockOfflineProvider(BaseLLMProvider):
-    """Offline Mock Provider dùng để chạy thử mà không tốn API Key"""
+    """Offline Mock Provider dùng để kiểm thử ReAct Loop không cần API Key."""
+
     def __init__(self):
         self.model_name = "Offline-Mock-Model-2026"
 
     def generate(self, prompt: str, system_prompt: str = "") -> str:
-        return f"[Mock Chatbot Response]: Xin chào! Tôi đã nhận được câu hỏi '{prompt}'. (Chế độ Chatbot không có Tool tra cứu dữ liệu thời gian thực)."
+        return (
+            "[Mock Chatbot Response]: Tôi có thể giải đáp quy định thư viện chung, "
+            "nhưng không thể truy cập dữ liệu tài liệu thời gian thực."
+        )
 
-    def generate_with_tools(self, prompt: str, tools_schema: List[Dict[str, Any]], system_prompt: str = "") -> Dict[str, Any]:
-        prompt_lower = prompt.lower()
-        
-        # Mô phỏng nhận diện intent gọi Tool
-        if "sv2026001" in prompt_lower and "đặt lịch" in prompt_lower:
+    @staticmethod
+    def _extract_document_id(prompt: str) -> str:
+        import re
+
+        match = re.search(r"\bTL\d+\b", prompt, flags=re.IGNORECASE)
+        return match.group(0).upper() if match else ""
+
+    @staticmethod
+    def _extract_datetime(prompt: str) -> str:
+        import re
+
+        match = re.search(
+            r"\b\d{1,2}:\d{2}\s+\d{1,2}/\d{1,2}/\d{4}\b",
+            prompt
+        )
+        return match.group(0) if match else ""
+
+    @staticmethod
+    def _extract_borrower_name(prompt: str) -> str:
+        known_borrowers = ["Nguyễn Minh Anh", "Trần Thị Bình"]
+        prompt_casefold = prompt.casefold()
+
+        for borrower in known_borrowers:
+            if borrower.casefold() in prompt_casefold:
+                return borrower
+        return ""
+
+    @staticmethod
+    def _extract_last_observation(prompt: str) -> tuple[str, Dict[str, Any]]:
+        tool_marker = "MCP_TOOL_USED:"
+        observation_marker = "MCP_OBSERVATION_JSON:"
+
+        if tool_marker not in prompt or observation_marker not in prompt:
+            return "", {}
+
+        tool_name = prompt.rsplit(tool_marker, 1)[1].splitlines()[0].strip()
+        raw_observation = prompt.rsplit(observation_marker, 1)[1].splitlines()[0].strip()
+
+        try:
+            return tool_name, json.loads(raw_observation)
+        except json.JSONDecodeError:
+            return tool_name, {}
+
+    @staticmethod
+    def _format_query_result(observation: Dict[str, Any]) -> str:
+        if observation.get("status") != "SUCCESS":
+            return observation.get(
+                "message",
+                "Không thể tra cứu thông tin tài liệu được yêu cầu."
+            )
+
+        data = observation.get("data", {})
+        borrower = data.get("borrower_name") or "Chưa có người mượn"
+        due_date = data.get("due_date") or "Không có"
+        reserved_by = data.get("reserved_by") or "Không có"
+
+        return (
+            f"Tài liệu {observation.get('document_id', '')} - "
+            f"'{data.get('title', '')}', tác giả {data.get('author', '')}. "
+            f"Vị trí: {data.get('location', '')}. "
+            f"Trạng thái: {data.get('status', '')}. "
+            f"Người mượn: {borrower}. Hạn trả: {due_date}. "
+            f"Người đặt trước: {reserved_by}."
+        )
+
+    def generate_with_tools(
+        self,
+        prompt: str,
+        tools_schema: List[Dict[str, Any]],
+        system_prompt: str = ""
+    ) -> Dict[str, Any]:
+        prompt_lower = prompt.casefold()
+        document_id = self._extract_document_id(prompt)
+        datetime_str = self._extract_datetime(prompt)
+        borrower_name = self._extract_borrower_name(prompt)
+        previous_tool, observation = self._extract_last_observation(prompt)
+
+        # Sau Observation, Mock Provider quyết định bước kế tiếp của ReAct Loop.
+        if previous_tool:
+            status = observation.get("status")
+
+            if status != "SUCCESS":
+                return {
+                    "type": "text",
+                    "content": observation.get(
+                        "message",
+                        f"Công cụ trả về trạng thái {status or 'UNKNOWN'}."
+                    ),
+                    "thought": "Observation cho biết thao tác không thành công; trả lời đúng lỗi từ Tool."
+                }
+
+            if previous_tool == "library_query" and "gia hạn" in prompt_lower:
+                data = observation.get("data", {})
+                current_borrower = data.get("borrower_name")
+
+                if data.get("status") != "Đang được mượn":
+                    return {
+                        "type": "text",
+                        "content": "Tài liệu hiện không được mượn nên không cần gia hạn.",
+                        "thought": "Observation cho thấy tài liệu không ở trạng thái đang được mượn."
+                    }
+
+                if data.get("reserved_by"):
+                    return {
+                        "type": "text",
+                        "content": (
+                            "Không thể gia hạn vì tài liệu đã được "
+                            f"{data['reserved_by']} đặt trước."
+                        ),
+                        "thought": "Observation cho thấy tài liệu đã có người đặt trước."
+                    }
+
+                if not datetime_str:
+                    return {
+                        "type": "text",
+                        "content": "Vui lòng cung cấp thời hạn mới theo định dạng HH:MM DD/MM/YYYY.",
+                        "thought": "Đã xác minh tài liệu nhưng còn thiếu thời hạn gia hạn mới."
+                    }
+
+                return {
+                    "type": "tool_call",
+                    "tool_name": "renew_library_item",
+                    "arguments": {
+                        "document_id": observation.get("document_id", document_id),
+                        "datetime_str": datetime_str,
+                        "borrower_name": current_borrower
+                    },
+                    "thought": "Đã xác minh tài liệu đủ điều kiện; tiếp tục gọi Tool gia hạn."
+                }
+
+            if previous_tool == "library_query":
+                return {
+                    "type": "text",
+                    "content": self._format_query_result(observation),
+                    "thought": "Đã có dữ liệu tra cứu từ MCP Server; tổng hợp Final Answer."
+                }
+
+            if previous_tool == "renew_library_item":
+                return {
+                    "type": "text",
+                    "content": observation.get(
+                        "message",
+                        "Đã hoàn tất gia hạn tài liệu."
+                    ),
+                    "thought": "Tool gia hạn đã thành công; trả kết quả cho người dùng."
+                }
+
+        # Lượt đầu tiên: xác định intent và Tool cần gọi.
+        if "gia hạn" in prompt_lower:
+            if not document_id:
+                return {
+                    "type": "text",
+                    "content": "Vui lòng cung cấp mã tài liệu cần gia hạn.",
+                    "thought": "Yêu cầu gia hạn còn thiếu document_id."
+                }
+
+            if not datetime_str:
+                return {
+                    "type": "text",
+                    "content": "Vui lòng cung cấp thời hạn mới theo định dạng HH:MM DD/MM/YYYY.",
+                    "thought": "Yêu cầu gia hạn còn thiếu datetime_str."
+                }
+
+            # Nếu chưa có tên người mượn hoặc người dùng yêu cầu kiểm tra trước,
+            # Agent tra cứu tài liệu rồi mới quyết định gia hạn.
+            if not borrower_name or "kiểm tra" in prompt_lower or "tra cứu" in prompt_lower:
+                return {
+                    "type": "tool_call",
+                    "tool_name": "library_query",
+                    "arguments": {"document_id": document_id},
+                    "thought": "Cần kiểm tra trạng thái và người mượn trước khi gia hạn."
+                }
+
             return {
                 "type": "tool_call",
-                "tool_name": "schedule_appointment",
-                "arguments": {"student_id": "SV2026001", "datetime_str": "14:00 15/09/2026", "advisor_name": "PGS.TS Nguyễn Văn A"},
-                "thought": "Người dùng yêu cầu đặt lịch hẹn tư vấn cho sinh viên SV2026001. Tôi sẽ gọi tool schedule_appointment."
-            }
-        elif "sv2026001" in prompt_lower or "tra cứu" in prompt_lower:
-            return {
-                "type": "tool_call",
-                "tool_name": "academic_query",
-                "arguments": {"student_id": "SV2026001"},
-                "thought": "Người dùng muốn tra cứu thông tin học vụ của sinh viên SV2026001. Tôi sẽ gọi tool academic_query."
-            }
-        else:
-            return {
-                "type": "text",
-                "content": f"[Mock Agent Response]: Xin chào! Quy chế học vụ VinUni yêu cầu sinh viên tích lũy tối thiểu 120 tín chỉ và duy trì GPA trên 2.0 để tốt nghiệp.",
-                "thought": "Câu hỏi chung về quy chế học vụ, trả lời trực tiếp không cần gọi Tool."
+                "tool_name": "renew_library_item",
+                "arguments": {
+                    "document_id": document_id,
+                    "datetime_str": datetime_str,
+                    "borrower_name": borrower_name
+                },
+                "thought": "Yêu cầu đã đủ thông tin; gọi Tool gia hạn tài liệu."
             }
 
+        if document_id or any(
+            keyword in prompt_lower
+            for keyword in ["tra cứu", "vị trí", "tình trạng", "tài liệu"]
+        ):
+            if not document_id:
+                return {
+                    "type": "text",
+                    "content": "Vui lòng cung cấp mã tài liệu cần tra cứu.",
+                    "thought": "Yêu cầu tra cứu còn thiếu document_id."
+                }
+
+            return {
+                "type": "tool_call",
+                "tool_name": "library_query",
+                "arguments": {"document_id": document_id},
+                "thought": "Cần gọi Tool tra cứu để lấy dữ liệu thư viện thực tế."
+            }
+
+        return {
+            "type": "text",
+            "content": (
+                "Tôi là Trợ lý Quản lý Thư viện và Tài liệu. Tôi có thể hỗ trợ "
+                "tra cứu vị trí, tình trạng tài liệu và gia hạn thời gian mượn."
+            ),
+            "thought": "Đây là câu hỏi chung, có thể trả lời trực tiếp mà không gọi Tool."
+        }
 
 class GeminiProvider(BaseLLMProvider):
     """Google Gemini Provider (Native Tool Calling với Google GenAI SDK)"""
