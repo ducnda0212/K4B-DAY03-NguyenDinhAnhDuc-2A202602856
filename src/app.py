@@ -71,6 +71,7 @@ def run_react_agent(user_query: str, provider, mcp_server: MCPAcademicServer) ->
     step = 0
     trace_logs = []
     tools_list = mcp_server.list_tools()
+    working_prompt = user_query
     
     while step < MAX_ITERATIONS:
         step += 1
@@ -78,7 +79,7 @@ def run_react_agent(user_query: str, provider, mcp_server: MCPAcademicServer) ->
         print(f"\n--- 🔄 Vòng lặp ReAct Loop (Step {step}/{MAX_ITERATIONS}) ---")
         
         # Gọi LLM với Native Tool Calling Specs
-        llm_response = provider.generate_with_tools(user_query, tools_list, system_prompt=REACT_AGENT_SYSTEM_PROMPT)
+        llm_response = provider.generate_with_tools(working_prompt, tools_list, system_prompt=REACT_AGENT_SYSTEM_PROMPT)
         latency_ms = round((time.time() - step_start_time) * 1000, 2)
         
         thought = llm_response.get("thought", "Đang suy luận...")
@@ -179,6 +180,20 @@ def run_react_agent(user_query: str, provider, mcp_server: MCPAcademicServer) ->
                 "latency_ms": latency_ms
             })
             
+            # Với yêu cầu "kiểm tra rồi gia hạn", nạp Observation của
+            # library_query vào vòng lặp tiếp theo để Agent gọi renew_library_item.
+            if tool_name == "library_query" and "gia hạn" in user_query.casefold():
+                working_prompt = (
+                    f"YÊU CẦU GỐC CỦA NGƯỜI DÙNG:\n{user_query}\n\n"
+                    f"MCP_TOOL_USED: {tool_name}\n"
+                    f"MCP_OBSERVATION_JSON: "
+                    f"{json.dumps(obs_data, ensure_ascii=False)}\n\n"
+                    "Dựa trên Observation, hãy gọi Tool tiếp theo nếu đủ điều kiện; "
+                    "nếu không, hãy trả lời rõ lý do không thể gia hạn."
+                )
+                print("🔄 [ReAct Continue]: Nạp Observation để quyết định bước gia hạn tiếp theo.")
+                continue
+
             # Kết thúc vòng lặp sau khi hoàn tất Observation và xuất Final Answer
             print(f"🧠 [Thought]: Đã nhận được dữ liệu từ MCP Server. Tổng hợp kết quả phản hồi.")
             print(f"🏁 [Final Answer]: {final_answer}")
@@ -215,12 +230,12 @@ if __name__ == "__main__":
         print("💡 Gợi ý:")
         print("   - Tra cứu: 'Hãy tra cứu vị trí và tình trạng tài liệu TL001.'")
         print(
-            "   - Gia hạn: 'Gia hạn TL002 cho Nguyễn Minh Anh đến "
-            "14:00 29/09/2026.'"
+            "   - Gia hạn: 'Gia hạn TL002 cho Nguyễn Đình Anh Đức đến "
+            "29/09/2026.'"
         )
         print(
             "   - Đa bước: 'Kiểm tra TL002 rồi gia hạn đến "
-            "14:00 29/09/2026 nếu hợp lệ.'"
+            "29/09/2026 nếu hợp lệ.'"
         )
         print("   - Gõ 'exit' hoặc 'quit' để kết thúc.\n")
 

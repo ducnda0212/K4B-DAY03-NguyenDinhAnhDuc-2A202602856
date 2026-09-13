@@ -35,16 +35,16 @@ TOOLS_SCHEMA = [
                     "type": "string",
                     "description": "Mã sách hoặc tài liệu cần gia hạn (ví dụ: 'TL002')."
                 },
-                "datetime_str": {
+                "date_str": {
                     "type": "string",
-                    "description": "Thời hạn mới sau khi gia hạn (ví dụ: '14:00 15/09/2026')."
+                    "description": "Ngày đến hạn (ví dụ: '15/09/2026')."
                 },
                 "borrower_name": {
                     "type": "string",
                     "description": "Họ tên người đang mượn tài liệu."
                 }
             },
-            "required": ["document_id", "datetime_str", "borrower_name"]
+            "required": ["document_id", "date_str", "borrower_name"]
         }
     }
 ]
@@ -70,8 +70,8 @@ MOCK_DATABASE = {
         "category": "Trí tuệ nhân tạo",
         "location": "Tầng 2 - Kệ AI-02",
         "status": "Đang được mượn",
-        "borrower_name": "Nguyễn Minh Anh",
-        "due_date": "14:00 15/09/2026",
+        "borrower_name": "Vũ Linh Trang",
+        "due_date": "15/09/2026",
         "reserved_by": None
     },
     "TL003": {
@@ -81,7 +81,7 @@ MOCK_DATABASE = {
         "location": "Tầng 3 - Kệ SE-01",
         "status": "Đang được mượn",
         "borrower_name": "Trần Thị Bình",
-        "due_date": "09:00 14/09/2026",
+        "due_date": "14/09/2026",
         "reserved_by": "Phạm Gia Huy"
     }
 }
@@ -107,13 +107,13 @@ def execute_library_query(document_id: str) -> str:
 
 def execute_renew_library_item(
     document_id: str,
-    datetime_str: str,
+    date_str: str,
     borrower_name: str
 ) -> str:
     """Thực thi gia hạn tài liệu cho đúng người đang mượn."""
     normalized_id = document_id.strip().upper()
     normalized_borrower = borrower_name.strip()
-    new_due_date = datetime_str.strip()
+    new_due_date = date_str.strip()
     document = MOCK_DATABASE.get(normalized_id)
 
     if not document:

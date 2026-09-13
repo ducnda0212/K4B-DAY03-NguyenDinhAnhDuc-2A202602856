@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Giao diện ReAct Agent quản lý thư viện tích hợp MCP Server cho VinUni AI Lab.">
+  <title>VinUni Library Agent Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#overview" aria-label="Library Agent Lab">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M8 9.5c4.3 0 8.3 1.1 12 4v18c-3.7-2.9-7.7-4-12-4v-18Z" stroke="currentColor" stroke-width="2.2"/>
+          <path d="M32 9.5c-4.3 0-8.3 1.1-12 4v18c3.7-2.9 7.7-4 12-4v-18Z" stroke="currentColor" stroke-width="2.2"/>
+          <path d="M20 13.5V32" stroke="currentColor" stroke-width="2.2"/>
+        </svg>
+      </span>
+      <span>
+        <strong>Library Agent</strong>
+        <small>ReAct × MCP Lab</small>
+      </span>
+    </a>
+
+    <nav class="side-nav" aria-label="Điều hướng chính">
+      <span class="nav-label">Workspace</span>
+      <a class="nav-item active" href="#overview" data-section="overview">
+        <span class="nav-icon">⌂</span>
+        <span>Tổng quan</span>
+      </a>
+      <a class="nav-item" href="#playground" data-section="playground">
+        <span class="nav-icon">✦</span>
+        <span>Agent Playground</span>
+        <kbd>⌘K</kbd>
+      </a>
+      <a class="nav-item" href="#flow" data-section="flow">
+        <span class="nav-icon">⌘</span>
+        <span>ReAct Flow</span>
+      </a>
+      <a class="nav-item" href="#tests" data-section="tests">
+        <span class="nav-icon">✓</span>
+        <span>Test Lab</span>
+        <span class="nav-count" id="navTestCount">5</span>
+      </a>
+      <a class="nav-item" href="#tools" data-section="tools">
+        <span class="nav-icon">◇</span>
+        <span>MCP Registry</span>
+        <span class="nav-count" id="navToolCount">2</span>
+      </a>
+
+      <span class="nav-label nav-label-spaced">Project</span>
+      <a class="nav-item" href="#inventory" data-section="inventory">
+        <span class="nav-icon">▤</span>
+        <span>Mock Database</span>
+      </a>
+      <button class="nav-item nav-button" id="resetButton" type="button">
+        <span class="nav-icon">↺</span>
+        <span>Reset dữ liệu</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-status">
+      <div class="status-orbit">
+        <span class="status-dot" id="sideStatusDot"></span>
+      </div>
+      <div>
+        <strong id="sideStatusLabel">Đang kết nối</strong>
+        <small id="sideStatusMeta">Kiểm tra MCP Server...</small>
+      </div>
+    </div>
+
+    <div class="student-card">
+      <span class="avatar">Đ</span>
+      <div>
+        <strong>Nguyễn Đình Anh Đức</strong>
+        <small>2A202602856 · K4B</small>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-button mobile-menu" id="menuButton" type="button" aria-label="Mở menu">☰</button>
+        <div>
+          <div class="eyebrow">DAY 03 · AGENTIC SYSTEM</div>
+          <h1>Command center</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="runtime-badge" id="runtimeBadge">
+          <span class="pulse"></span>
+          <span id="runtimeText">Khởi động runtime</span>
+        </div>
+        <button class="icon-button" id="refreshButton" type="button" title="Làm mới dữ liệu" aria-label="Làm mới">↻</button>
+        <a class="primary-button compact" href="#playground">Mở playground <span>↗</span></a>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="hero section-anchor" id="overview">
+        <div class="hero-copy">
+          <div class="hero-kicker"><span></span> VINUNI LIBRARY INTELLIGENCE</div>
+          <h2>Tra cứu nhanh.<br><em>Hành động có kiểm chứng.</em></h2>
+          <p>
+            Một workspace trực quan cho toàn bộ bài lab: so sánh Chatbot và ReAct Agent,
+            quan sát MCP Tool Calling, chạy test suite và đọc Waterfall Trace theo thời gian thực.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#playground">Bắt đầu trò chuyện <span>→</span></a>
+            <a class="ghost-button" href="#flow">Xem kiến trúc</a>
+          </div>
+        </div>
+        <div class="hero-visual" aria-label="Minh họa luồng ReAct">
+          <div class="orbital orbital-one"></div>
+          <div class="orbital orbital-two"></div>
+          <div class="agent-core">
+            <span class="core-glow"></span>
+            <span class="core-label">ReAct</span>
+            <small>Agent Core</small>
+          </div>
+          <div class="floating-node node-thought"><span>01</span> Thought</div>
+          <div class="floating-node node-action"><span>02</span> Action</div>
+          <div class="floating-node node-observation"><span>03</span> Observation</div>
+          <svg class="flow-lines" viewBox="0 0 520 360" fill="none" aria-hidden="true">
+            <path d="M258 80C367 75 428 126 423 196"/>
+            <path d="M421 207C395 290 320 314 252 286"/>
+            <path d="M239 281C149 269 101 211 115 143"/>
+          </svg>
+        </div>
+      </section>
+
+      <section class="metric-grid" aria-label="Thông số hệ thống">
+        <article class="metric-card accent-card">
+          <div class="metric-top"><span>Provider</span><span class="mini-icon">◉</span></div>
+          <strong id="metricProvider">—</strong>
+          <small id="metricModel">Đang tải model</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>MCP Tools</span><span class="mini-icon">◇</span></div>
+          <strong id="metricTools">—</strong>
+          <small>Native JSON Schema</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>Test Cases</span><span class="mini-icon">✓</span></div>
+          <strong id="metricTests">5</strong>
+          <small id="metricTestState">Sẵn sàng nghiệm thu</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>Knowledge Base</span><span class="mini-icon">▤</span></div>
+          <strong id="metricDocuments">—</strong>
+          <small>Tài liệu mock khả dụng</small>
+        </article>
+      </section>
+
+      <section class="workspace-grid section-anchor" id="playground">
+        <article class="panel chat-panel">
+          <div class="panel-header chat-header">
+            <div>
+              <span class="section-index">01 / PLAYGROUND</span>
+              <h3>Thử nghiệm hội thoại</h3>
+            </div>
+            <div class="mode-switch" role="group" aria-label="Chế độ hội thoại">
+              <button class="mode-button" data-mode="baseline" type="button">Chatbot</button>
+              <button class="mode-button active" data-mode="agent" type="button">ReAct Agent</button>
+            </div>
+          </div>
+
+          <div class="chat-context">
+            <span class="context-dot"></span>
+            <span id="chatContextText">Agent có quyền gọi MCP Tools</span>
+            <span class="context-divider"></span>
+            <span id="chatContextModel">Mock Offline</span>
+          </div>
+
+          <div class="message-list" id="messageList" aria-live="polite">
+            <div class="message assistant-message">
+              <div class="message-avatar">AI</div>
+              <div class="message-body">
+                <div class="message-meta"><strong>Library Agent</strong><span>vừa xong</span></div>
+                <div class="message-bubble">
+                  Xin chào! Tôi có thể tra cứu vị trí, tình trạng tài liệu và thực hiện gia hạn qua MCP Server. Bạn muốn bắt đầu với mã tài liệu nào?
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="suggestion-row" id="suggestionRow">
+            <button type="button" data-prompt="Hãy tra cứu vị trí và tình trạng của tài liệu TL001.">Tra cứu tài liệu (Happy case)</button>
+            <button type="button" data-prompt="Gia hạn tài liệu TL002 cho Vũ Linh Trang đến ngày 29/09/2026.">Gia hạn (Happy case)</button>
+            <button type="button" data-prompt="Gia hạn tài liệu TL002 cho Nguyễn Đình Anh Đức đến ngày 29/09/2026.">Gia hạn TL002 (Case fail)</button>
+            <button type="button" data-prompt="Hãy tra cứu thông tin tài liệu TL999.">Tra cứu tài liệu (Case fail)</button>
+          </div>
+
+          <form class="composer" id="chatForm">
+            <textarea id="chatInput" rows="1" placeholder="Nhập yêu cầu cho Library Agent..." aria-label="Nội dung câu hỏi"></textarea>
+            <div class="composer-footer">
+              <span><kbd>Enter</kbd> gửi · <kbd>Shift</kbd> + <kbd>Enter</kbd> xuống dòng</span>
+              <button class="send-button" id="sendButton" type="submit" aria-label="Gửi câu hỏi">
+                <span>Gửi yêu cầu</span>
+                <svg viewBox="0 0 24 24" fill="none"><path d="m5 12 14-7-4 14-3.2-5.8L5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m11.8 13.2 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </form>
+        </article>
+
+        <article class="panel trace-panel">
+          <div class="panel-header">
+            <div>
+              <span class="section-index">LIVE OBSERVABILITY</span>
+              <h3>Waterfall Trace</h3>
+            </div>
+            <div class="trace-live"><span></span> LIVE</div>
+          </div>
+          <div class="trace-summary">
+            <div><strong id="traceSteps">0</strong><span>events</span></div>
+            <div><strong id="traceToolCalls">0</strong><span>tool calls</span></div>
+            <div><strong id="traceLatency">0</strong><span>ms</span></div>
+          </div>
+          <div class="trace-list" id="traceList">
+            <div class="empty-state compact-empty">
+              <span class="empty-glyph">⌁</span>
+              <strong>Chưa có trace</strong>
+              <p>Gửi một yêu cầu để quan sát luồng Thought → Action → Observation.</p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="architecture section-anchor" id="flow">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">02 / SYSTEM MAP</span>
+            <h3>Luồng thực thi ReAct × MCP</h3>
+          </div>
+          <p>Mỗi quyết định đều để lại dấu vết có thể kiểm tra.</p>
+        </div>
+
+        <div class="architecture-board">
+          <div class="architecture-track" aria-hidden="true"><span></span></div>
+          <article class="architecture-node node-user">
+            <div class="architecture-number">01</div>
+            <div class="node-symbol">U</div>
+            <strong>User Query</strong>
+            <small>Yêu cầu tự nhiên</small>
+          </article>
+          <div class="architecture-arrow">→</div>
+          <article class="architecture-node node-llm">
+            <div class="architecture-number">02</div>
+            <div class="node-symbol">AI</div>
+            <strong>LLM Provider</strong>
+            <small>Native Tool Calling</small>
+          </article>
+          <div class="architecture-arrow">→</div>
+          <article class="architecture-node node-mcp">
+            <div class="architecture-number">03</div>
+            <div class="node-symbol">M</div>
+            <strong>MCP Server</strong>
+            <small>JSON-RPC 2.0</small>
+          </article>
+          <div class="architecture-arrow">→</div>
+          <article class="architecture-node node-tool">
+            <div class="architecture-number">04</div>
+            <div class="node-symbol">T</div>
+            <strong>Tool Backend</strong>
+            <small>Query · Renew</small>
+          </article>
+          <div class="architecture-return">Observation trở về Agent ↺</div>
+        </div>
+      </section>
+
+      <section class="inventory-section section-anchor" id="inventory">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">03 / DATA SOURCE</span>
+            <h3>Kho tài liệu mô phỏng</h3>
+          </div>
+          <div class="legend">
+            <span><i class="legend-dot available"></i>Có sẵn</span>
+            <span><i class="legend-dot borrowed"></i>Đang mượn</span>
+          </div>
+        </div>
+        <div class="inventory-grid" id="inventoryGrid">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+      </section>
+
+      <section class="test-section section-anchor" id="tests">
+        <div class="section-heading test-heading">
+          <div>
+            <span class="section-index">04 / EVALUATION</span>
+            <h3>Test Suite nghiệm thu</h3>
+          </div>
+          <button class="primary-button" id="runTestsButton" type="button">
+            Chạy toàn bộ 5 tests <span>▶</span>
+          </button>
+        </div>
+
+        <div class="test-overview panel">
+          <div class="score-ring" id="scoreRing" style="--score: 0">
+            <div><strong id="scoreValue">—</strong><span>passed</span></div>
+          </div>
+          <div class="test-progress-copy">
+            <span class="test-status-label" id="testStatusLabel">READY TO RUN</span>
+            <h4 id="testStatusTitle">Kiểm chứng hành vi Agent</h4>
+            <p id="testStatusDescription">Chạy test suite để kiểm tra direct answer, tool query, renewal action và edge case.</p>
+            <div class="progress-track"><span id="testProgressBar"></span></div>
+          </div>
+          <div class="test-stat-stack">
+            <div><strong id="testPassed">0</strong><span>Pass</span></div>
+            <div><strong id="testFailed">0</strong><span>Fail</span></div>
+            <div><strong id="testTraceEvents">0</strong><span>Trace</span></div>
+          </div>
+        </div>
+
+        <div class="test-list" id="testList">
+          <div class="test-placeholder">Đang tải danh sách test case...</div>
+        </div>
+      </section>
+
+      <section class="tools-section section-anchor" id="tools">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">05 / MCP REGISTRY</span>
+            <h3>Tool Schema đang công bố</h3>
+          </div>
+          <p>Hai năng lực cốt lõi của Library Agent.</p>
+        </div>
+        <div class="tool-grid" id="toolGrid">
+          <div class="skeleton-card tool-skeleton"></div>
+          <div class="skeleton-card tool-skeleton"></div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>DAY03 · CHATBOT VS REACT AGENT</span>
+        <span>Nguyễn Đình Anh Đức · 2A202602856</span>
+        <span>Built for observable intelligence.</span>
+      </footer>
+    </div>
+  </main>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

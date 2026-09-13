@@ -16,14 +16,14 @@
   {
     "id": "TC03",
     "type": "renewal_action",
-    "question": "Gia hạn tài liệu TL002 cho Nguyễn Minh Anh đến 14:00 29/09/2026.",
-    "expected_behavior": "Agent gọi renew_library_item với đủ document_id, datetime_str và borrower_name.",
+    "question": "Gia hạn tài liệu TL002 cho Vũ Linh Trang đến ngày 30/09/2026.",
+    "expected_behavior": "Agent gọi renew_library_item với đủ document_id, date_str và borrower_name.",
     "complexity": "Medium"
   },
   {
     "id": "TC04",
     "type": "multi_step_reasoning",
-    "question": "Hãy kiểm tra tài liệu TL002 rồi gia hạn đến 14:00 30/09/2026 nếu tài liệu đủ điều kiện.",
+    "question": "Hãy kiểm tra tài liệu TL002 rồi gia hạn đến ngày 30/09/2026 nếu tài liệu đủ điều kiện.",
     "expected_behavior": "Agent gọi library_query trước, dùng Observation để xác định người mượn, sau đó gọi renew_library_item.",
     "complexity": "High"
   },

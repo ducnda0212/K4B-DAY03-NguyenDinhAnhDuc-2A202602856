@@ -28,24 +28,56 @@ Dán 1 đoạn trích xuất log tiêu biểu từ file `docs/trace_waterfall.js
 [
   {
     "step": 1,
-    "query": "Gia hạn tài liệu TL002 cho Nguyễn Minh Anh đến 14:00 29/09/2026.",
+    "query": "Hãy kiểm tra tài liệu TL002 rồi gia hạn đến ngày 30/09/2026 nếu tài liệu đủ điều kiện.",
+    "action_type": "TOOL_EXECUTION",
+    "tool_name": "library_query",
+    "arguments": {
+      "document_id": "TL002"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "document_id": "TL002",
+      "data": {
+        "title": "Trí tuệ nhân tạo hiện đại",
+        "author": "Trần Minh Đức",
+        "category": "Trí tuệ nhân tạo",
+        "location": "Tầng 2 - Kệ AI-02",
+        "status": "Đang được mượn",
+        "borrower_name": "Vũ Linh Trang",
+        "due_date": "30/09/2026",
+        "reserved_by": null
+      }
+    },
+    "latency_ms": 1566.49
+  },
+  {
+    "step": 2,
+    "query": "Hãy kiểm tra tài liệu TL002 rồi gia hạn đến ngày 30/09/2026 nếu tài liệu đủ điều kiện.",
     "action_type": "TOOL_EXECUTION",
     "tool_name": "renew_library_item",
     "arguments": {
       "document_id": "TL002",
-      "datetime_str": "14:00 29/09/2026",
-      "borrower_name": "Nguyễn Minh Anh"
+      "date_str": "30/09/2026",
+      "borrower_name": "Vũ Linh Trang"
     },
     "observation": {
       "status": "SUCCESS",
       "document_id": "TL002",
       "title": "Trí tuệ nhân tạo hiện đại",
-      "borrower_name": "Nguyễn Minh Anh",
-      "previous_due_date": "14:00 15/09/2026",
-      "new_due_date": "14:00 29/09/2026",
-      "message": "Đã gia hạn tài liệu 'Trí tuệ nhân tạo hiện đại' cho Nguyễn Minh Anh đến 14:00 29/09/2026."
+      "borrower_name": "Vũ Linh Trang",
+      "previous_due_date": "30/09/2026",
+      "new_due_date": "30/09/2026",
+      "message": "Đã gia hạn tài liệu 'Trí tuệ nhân tạo hiện đại' cho Vũ Linh Trang đến 30/09/2026."
     },
-    "latency_ms": 3888.1
+    "latency_ms": 1077.71
+  },
+  {
+    "step": 3,
+    "query": "Hãy kiểm tra tài liệu TL002 rồi gia hạn đến ngày 30/09/2026 nếu tài liệu đủ điều kiện.",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Tổng hợp kết quả từ MCP Server thành công.",
+    "output": "Đã gia hạn tài liệu 'Trí tuệ nhân tạo hiện đại' cho Vũ Linh Trang đến 30/09/2026.",
+    "latency_ms": 10.0
   }
 ]
 ```

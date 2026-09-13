@@ -57,12 +57,21 @@ class MockOfflineProvider(BaseLLMProvider):
 
     @staticmethod
     def _extract_borrower_name(prompt: str) -> str:
-        known_borrowers = ["Nguyễn Minh Anh", "Trần Thị Bình"]
-        prompt_casefold = prompt.casefold()
+        import re
 
-        for borrower in known_borrowers:
-            if borrower.casefold() in prompt_casefold:
-                return borrower
+        # Trích xuất cả tên đúng lẫn tên sai do người dùng cung cấp để Tool
+        # Backend tự kiểm tra và trả về BORROWER_MISMATCH khi cần.
+        patterns = [
+            r"dưới tên\s+([^,.;\n]+?)(?=\s+(?:đến|tới|vào)\b|[,.;\n]|$)",
+            r"(?:người mượn|tên người mượn)\s+(?:là\s+)?([^,.;\n]+?)(?=\s+(?:đến|tới|vào)\b|[,.;\n]|$)",
+            r"\bcho\s+([^,.;\n]+?)(?=\s+(?:đến|tới|vào)\b|[,.;\n]|$)"
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, prompt, flags=re.IGNORECASE)
+            if match:
+                return " ".join(match.group(1).split())
+
         return ""
 
     @staticmethod
@@ -163,7 +172,7 @@ class MockOfflineProvider(BaseLLMProvider):
                     "arguments": {
                         "document_id": observation.get("document_id", document_id),
                         "datetime_str": datetime_str,
-                        "borrower_name": current_borrower
+                        "borrower_name": borrower_name or current_borrower
                     },
                     "thought": "Đã xác minh tài liệu đủ điều kiện; tiếp tục gọi Tool gia hạn."
                 }
